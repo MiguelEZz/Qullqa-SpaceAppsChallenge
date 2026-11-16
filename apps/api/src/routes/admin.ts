@@ -19,12 +19,12 @@ async function funnel(cid: string | null) {
   const inC = (col: string) => (cid ? sql`and ${sql(col)} = ${cid}` : sql``);
   const [f] = await sql<Record<string, number>[]>`
     select
-      (select count(*)::int from users u where (not u.is_demo or ${!!cid}) ${cid ? sql`and exists(select 1 from memberships m where m.user_id = u.id and m.community_id = ${cid})` : sql``}) as registered,
-      (select count(distinct m.user_id)::int from memberships m join users u on u.id = m.user_id where (not u.is_demo or ${!!cid}) ${inC('m.community_id')}) as joined,
-      (select count(distinct p.owner_id)::int from parcels p join users u on u.id = p.owner_id where (not u.is_demo or ${!!cid}) ${inC('p.community_id')}) as parcel,
-      (select count(distinct pr.user_id)::int from preferences pr join users u on u.id = pr.user_id where (not u.is_demo or ${!!cid}) ${inC('pr.community_id')}) as priorities,
-      (select count(distinct m.user_id)::int from memberships m join users u on u.id = m.user_id where m.submitted_at is not null and (not u.is_demo or ${!!cid}) ${inC('m.community_id')}) as submitted,
-      (select count(distinct m.user_id)::int from memberships m join users u on u.id = m.user_id where m.plan_viewed_at is not null and (not u.is_demo or ${!!cid}) ${inC('m.community_id')}) as viewed`;
+      (select count(*)::int from users u where (not (u.is_demo or u.is_guest) or ${!!cid}) ${cid ? sql`and exists(select 1 from memberships m where m.user_id = u.id and m.community_id = ${cid})` : sql``}) as registered,
+      (select count(distinct m.user_id)::int from memberships m join users u on u.id = m.user_id where (not (u.is_demo or u.is_guest) or ${!!cid}) ${inC('m.community_id')}) as joined,
+      (select count(distinct p.owner_id)::int from parcels p join users u on u.id = p.owner_id where (not (u.is_demo or u.is_guest) or ${!!cid}) ${inC('p.community_id')}) as parcel,
+      (select count(distinct pr.user_id)::int from preferences pr join users u on u.id = pr.user_id where (not (u.is_demo or u.is_guest) or ${!!cid}) ${inC('pr.community_id')}) as priorities,
+      (select count(distinct m.user_id)::int from memberships m join users u on u.id = m.user_id where m.submitted_at is not null and (not (u.is_demo or u.is_guest) or ${!!cid}) ${inC('m.community_id')}) as submitted,
+      (select count(distinct m.user_id)::int from memberships m join users u on u.id = m.user_id where m.plan_viewed_at is not null and (not (u.is_demo or u.is_guest) or ${!!cid}) ${inC('m.community_id')}) as viewed`;
   return f!;
 }
 
@@ -55,24 +55,24 @@ export async function adminRoutes(app: FastifyInstance) {
     await requireAdmin(req);
     const [t] = await sql<Record<string, number>[]>`
       select
-        (select count(*)::int from users where not is_demo) as users,
-        (select count(*)::int from users where not is_demo and created_at > now() - interval '7 days') as users7,
-        (select count(distinct m.community_id)::int from memberships m join users u on u.id = m.user_id where not u.is_demo) as communities,
-        (select count(*)::int from memberships m join users u on u.id = m.user_id where not u.is_demo and m.submitted_at is not null) as submitted,
-        (select count(*)::int from parcels p join users u on u.id = p.owner_id where not u.is_demo) as parcels,
-        (select coalesce(sum(ST_Area(p.polygon)) / 10000, 0)::float from parcels p join users u on u.id = p.owner_id where not u.is_demo) as hectares,
-        (select count(*)::int from observations o join users u on u.id = o.user_id where not u.is_demo) as observations,
+        (select count(*)::int from users where not (is_demo or is_guest)) as users,
+        (select count(*)::int from users where not (is_demo or is_guest) and created_at > now() - interval '7 days') as users7,
+        (select count(distinct m.community_id)::int from memberships m join users u on u.id = m.user_id where not (u.is_demo or u.is_guest)) as communities,
+        (select count(*)::int from memberships m join users u on u.id = m.user_id where not (u.is_demo or u.is_guest) and m.submitted_at is not null) as submitted,
+        (select count(*)::int from parcels p join users u on u.id = p.owner_id where not (u.is_demo or u.is_guest)) as parcels,
+        (select coalesce(sum(ST_Area(p.polygon)) / 10000, 0)::float from parcels p join users u on u.id = p.owner_id where not (u.is_demo or u.is_guest)) as hectares,
+        (select count(*)::int from observations o join users u on u.id = o.user_id where not (u.is_demo or u.is_guest)) as observations,
         (select count(*)::int from runs r join communities c on c.id = r.community_id where not c.is_demo) as runs,
         (select count(*)::int from runs r join communities c on c.id = r.community_id where not c.is_demo and r.status = 'failed') as runs_failed,
         (select coalesce(avg(duration_ms), 0)::float from runs where status = 'done') as run_avg_ms`;
     const signups = await sql<{ day: string; n: number }[]>`
-      select to_char(d, 'YYYY-MM-DD') as day, (select count(*)::int from users u where not u.is_demo and u.created_at::date = d::date) as n
+      select to_char(d, 'YYYY-MM-DD') as day, (select count(*)::int from users u where not (u.is_demo or u.is_guest) and u.created_at::date = d::date) as n
       from generate_series(current_date - 29, current_date, interval '1 day') d order by d`;
     const obsByType = await sql<{ type: string; n: number }[]>`
-      select o.type, count(*)::int as n from observations o join users u on u.id = o.user_id where not u.is_demo group by o.type order by n desc`;
+      select o.type, count(*)::int as n from observations o join users u on u.id = o.user_id where not (u.is_demo or u.is_guest) group by o.type order by n desc`;
     const cropArea = await sql<{ crop: string; ha: number; parcels: number }[]>`
       select p.current_rotation[3] as crop, (sum(ST_Area(p.polygon)) / 10000)::float as ha, count(*)::int as parcels
-      from parcels p join users u on u.id = p.owner_id where not u.is_demo group by 1 order by ha desc`;
+      from parcels p join users u on u.id = p.owner_id where not (u.is_demo or u.is_guest) group by 1 order by ha desc`;
     const communities = await sql<{
       id: string; name: string; province: string | null; is_demo: boolean; has_valley: boolean; members: number; submitted: number;
       parcels: number; hectares: number; observations: number; frosts: number; last_run: Date | null; last_status: string | null;
@@ -92,11 +92,11 @@ export async function adminRoutes(app: FastifyInstance) {
     const [act] = await sql<{ active7: number; active30: number }[]>`
       select count(*) filter (where last_seen_at > now() - interval '7 days')::int as active7,
              count(*) filter (where last_seen_at > now() - interval '30 days')::int as active30
-      from users where not is_demo`;
+      from users where not (is_demo or is_guest)`;
     const obsByWeek = await sql<{ week: string; n: number }[]>`
       select to_char(w, 'DD/MM') as week,
         (select count(*)::int from observations o join users u on u.id = o.user_id
-         where not u.is_demo and o.created_at >= w and o.created_at < w + interval '7 days') as n
+         where not (u.is_demo or u.is_guest) and o.created_at >= w and o.created_at < w + interval '7 days') as n
       from generate_series(date_trunc('week', now()) - interval '11 weeks', date_trunc('week', now()), interval '1 week') w order by w`;
     const latest = await sql<{ result: RunResult }[]>`
       select distinct on (r.community_id) r.result from runs r join communities c on c.id = r.community_id

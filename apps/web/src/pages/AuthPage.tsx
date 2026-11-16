@@ -6,6 +6,7 @@ import { useSession } from '../lib/session.tsx';
 import { Card, ErrorMsg, Field, Page } from '../components/ui.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { RecoveryCodeNotice } from '../components/RecoveryCode.tsx';
+import { GuestButton } from '../components/GuestButton.tsx';
 
 const onlyDigits = (v: string, n: number) => v.replace(/\D/g, '').slice(0, n);
 
@@ -72,6 +73,7 @@ export function AuthPage() {
   const pinType = showPin ? 'text' : 'password';
   return (
     <Page title={isNew ? 'Crea tu cuenta' : 'Ingresa'} variant="hero" kicker={isNew ? 'Bienvenido' : 'Qué gusto verte'}>
+      <GuestButton next={next} />
       <Card>
         <form onSubmit={submit}>
           {isNew && (

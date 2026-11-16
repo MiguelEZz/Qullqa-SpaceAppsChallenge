@@ -1,4 +1,5 @@
 import { Card, InstallBanner, LinkButton, Page } from '../components/ui.tsx';
+import { GuestButton } from '../components/GuestButton.tsx';
 
 /** Portada para quien aún no tiene cuenta. */
 export function LandingPage() {
@@ -9,6 +10,7 @@ export function LandingPage() {
           Qullqa junta el clima y los satélites de la NASA con lo que cada familia ve en su chacra. Así la comunidad elige qué sembrar, cuándo y con
           quién, y nadie sale perdiendo.
         </p>
+        <GuestButton />
         <LinkButton to="/ingresar" icon="user">CREAR MI CUENTA</LinkButton>
         <LinkButton to="/ingresar?modo=ingresar" variant="secondary">Ya tengo cuenta</LinkButton>
       </section>

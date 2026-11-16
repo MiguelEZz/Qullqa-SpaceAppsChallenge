@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import {
   ChangePinBody, ConfirmPinBody, LoginBody, RegisterBody, ResetPinBody, TERMS_VERSION, UpdateMeBody, type AuthResult, type Me,
@@ -44,6 +45,26 @@ export async function authRoutes(app: FastifyInstance) {
     if (!user) throw new HttpError(409, 'Ese número ya está registrado. Ingresa con tu PIN.');
     await startSession(reply, user);
     return { id: user.id, name: user.name, recoveryCode: code.display };
+  });
+
+  /**
+   * «Acceder como invitado»: crea una cuenta al momento, sin nombre, celular ni PIN.
+   * El celular es un identificador interno que no sirve para ingresar; la sesión vive en la cookie.
+   */
+  const guestHits = new Map<string, number[]>();
+  app.post('/api/auth/guest', async (req, reply): Promise<AuthResult> => {
+    const now = Date.now();
+    const recent = (guestHits.get(req.ip) ?? []).filter((t) => now - t < 3600_000);
+    if (recent.length >= 20) throw new HttpError(429, 'Demasiados accesos de invitado. Intenta en una hora.');
+    guestHits.set(req.ip, [...recent, now]);
+    const tag = randomBytes(6).toString('hex');
+    const name = `Invitado ${parseInt(tag.slice(0, 4), 16) % 9000 + 1000}`;
+    const [user] = await sql<{ id: string; name: string }[]>`
+      insert into users (name, phone, pin_hash, is_guest, terms_accepted_at, terms_version)
+      values (${name}, ${`invitado-${tag}`}, ${await hashPin(randomBytes(16).toString('hex'))}, true, now(), ${TERMS_VERSION})
+      returning id, name`;
+    await startSession(reply, user!);
+    return { id: user!.id, name: user!.name };
   });
 
   app.post('/api/auth/login', async (req, reply): Promise<AuthResult> => {
