@@ -1,0 +1,22 @@
+{
+  "name": "@qullqa/data",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "fetch:colca": "tsx --env-file-if-exists=../../.env scripts/fetch-colca.ts",
+    "correct:rain": "tsx --env-file=../../.env scripts/correct-rain.ts"
+  },
+  "dependencies": {
+    "@qullqa/shared": "workspace:*",
+    "geotiff": "^2.1.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
+  }
+}

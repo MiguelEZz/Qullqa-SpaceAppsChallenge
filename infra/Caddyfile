@@ -1,0 +1,26 @@
+# Un solo origen público: la PWA y la API detrás del mismo dominio.
+# El túnel (ngrok o cloudflared) apunta a este puerto; el TLS lo pone el túnel.
+{
+	auto_https off
+	admin off
+}
+
+:8080 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy host.docker.internal:3000 {
+			# SSE: no bufferizar
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv/web
+		# El service worker y el manifiesto nunca se cachean, para que las actualizaciones lleguen
+		@nocache path /sw.js /registerSW.js /manifest.webmanifest /index.html
+		header @nocache Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

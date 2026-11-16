@@ -1,0 +1,25 @@
+{
+  "name": "qullqa",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter ./apps/** dev",
+    "build:web": "pnpm -F @qullqa/web build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "infra:up": "docker compose -f infra/docker-compose.yml --env-file .env up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml --env-file .env down",
+    "tunnel": "bash infra/tunnel.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "description": "Qullqa: a community digital twin to decide what to plant (NASA Space Apps Challenge 2026)",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  }
+}

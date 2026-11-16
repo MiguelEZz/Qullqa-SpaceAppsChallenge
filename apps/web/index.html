@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#b54423" />
+    <meta name="description" content="Qullqa ayuda a las comunidades andinas a decidir juntas qué sembrar, cuándo y con quién, usando datos de la NASA y lo que cada agricultor observa en su chacra." />
+    <meta property="og:title" content="Qullqa — Decidir juntos qué sembrar" />
+    <meta property="og:description" content="Gemelo digital comunitario para agricultores andinos. Datos NASA + observaciones de campo." />
+    <meta property="og:image" content="/logo-qullqa-lg.png" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>Qullqa — Decidir juntos qué sembrar</title>
+    <script>
+      // Chrome avisa que la app se puede instalar (beforeinstallprompt) a veces antes de que cargue React:
+      // se guarda aquí para que el botón «Instalar» funcione con un solo toque.
+      // Abierto desde WhatsApp/Facebook (Custom Tab de Android): ahí no se puede instalar
+      try {
+        if (document.referrer.indexOf('android-app://') === 0) sessionStorage.setItem('qullqa-from-app', document.referrer.slice(14));
+      } catch (e) {}
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__qullqaInstall = e;
+        window.dispatchEvent(new Event('qullqa-installable'));
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

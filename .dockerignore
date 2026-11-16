@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+.git
+.env
+apps/api/out
+infra/data
+*.pdf
+*.swp
+.*.swp
+*.swo
+*.pem

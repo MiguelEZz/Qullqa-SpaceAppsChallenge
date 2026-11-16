@@ -1,0 +1,19 @@
+# Producción: Caddy obtiene el certificado HTTPS de Let's Encrypt para {$DOMAIN} solo.
+# Requisitos: registro DNS A del dominio → IP del servidor, y puertos 80/443 abiertos.
+{$DOMAIN} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:3000 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv/web
+		@nocache path /sw.js /registerSW.js /manifest.webmanifest /index.html
+		header @nocache Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

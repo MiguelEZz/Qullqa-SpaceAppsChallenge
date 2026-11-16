@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+infra/data/
+apps/api/out/
+*.pem
+*.swp
+.*.swp
+*.swo
+
+# Respaldos de la base descargados con ./infra/azure.sh backup
+backups/
+
+# Salidas locales
+*.dump
