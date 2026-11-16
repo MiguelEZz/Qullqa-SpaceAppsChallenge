@@ -80,6 +80,8 @@ export const Me = z.object({
   createdAt: z.string(),
   /** Acceso al panel de administración (ADMIN_PHONES). */
   isAdmin: z.boolean(),
+  /** Cuenta de invitado (jurado de NASA Space Apps): puede generar su plan al momento. */
+  isGuest: z.boolean(),
   /** Un administrador está «viendo como» esta cuenta demo. */
   actingFor: z.object({ adminName: z.string() }).nullable(),
   communities: z.array(

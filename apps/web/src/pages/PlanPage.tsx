@@ -172,7 +172,7 @@ export function PlanPage() {
       )}
       {d.lastError && !d.pending && <p className="notice">{d.lastError}</p>}
 
-      {d.waiting && <WaitingCard personalPlanAt={d.waiting.personalPlanAt} othersSubmitted={d.waiting.othersSubmitted} memberCount={d.memberCount} cid={cid} />}
+      {d.waiting && <WaitingCard personalPlanAt={d.waiting.personalPlanAt} othersSubmitted={d.waiting.othersSubmitted} memberCount={d.memberCount} cid={cid} onStarted={() => void plan.reload()} />}
 
       {!d.latest && !d.pending && !d.waiting && d.hasValleyData && (
         <Card title="Todavía no tienes plan" icon="sprout">

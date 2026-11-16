@@ -7,13 +7,14 @@ import { useApi } from '../lib/hooks.ts';
 import { Card, ErrorMsg, InstallBanner, LinkButton, Loading, Page } from '../components/ui.tsx';
 import { Icon, type IconName } from '../components/Icon.tsx';
 import { CommunitySearch } from '../components/CommunitySearch.tsx';
-import { PushButton } from '../components/Waiting.tsx';
+import { GuestPlanNow, PushButton } from '../components/Waiting.tsx';
 
 /** Paso 5 mientras espera a sus vecinos: qué pasará y cuándo, y activar avisos. */
-function WaitingInline({ waiting, memberCount, cid }: { waiting: NonNullable<PlanResponse['waiting']>; memberCount: number; cid: string }) {
+function WaitingInline({ waiting, memberCount, cid, onStarted }: { waiting: NonNullable<PlanResponse['waiting']>; memberCount: number; cid: string; onStarted: () => void }) {
   const when = new Date(waiting.personalPlanAt).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
   return (
     <>
+      <GuestPlanNow cid={cid} onStarted={onStarted} />
       <p className="small">
         {memberCount > 1
           ? <><strong>{waiting.othersSubmitted} de {memberCount - 1}</strong> vecinos enviaron sus datos. Cuando lo hagan, calcularemos el plan de la comunidad y te avisaremos.</>
@@ -108,7 +109,7 @@ export function HomePage() {
               <h2><span className="ico-tile"><Icon name={next.icon} size={22} /></span>{next.title}</h2>
               {next.text && <p>{next.text}</p>}
               {nextIdx === 0 ? <CommunitySearch />
-                : nextIdx === 4 && plan.data?.waiting ? <WaitingInline waiting={plan.data.waiting} memberCount={plan.data.memberCount} cid={cid} />
+                : nextIdx === 4 && plan.data?.waiting ? <WaitingInline waiting={plan.data.waiting} memberCount={plan.data.memberCount} cid={cid} onStarted={() => void plan.reload()} />
                 : nextIdx === 4 && (calculating || (plan.data && !plan.data.hasValleyData)) ? null : next.action}
               <ErrorMsg error={error} />
             </Card>

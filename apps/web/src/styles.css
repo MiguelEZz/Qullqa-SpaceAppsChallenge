@@ -392,3 +392,8 @@ footer.site p { margin: 6px 0; }
 .guest .guest-btn span { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
 .guest .guest-btn small { font-size: .8rem; font-weight: 400; opacity: .9; letter-spacing: .02em; }
 .guest p { margin: 6px 0 0; text-align: center; }
+.guest-btn { background: var(--green); }
+.guest-btn:hover:not(:disabled) { background: var(--green); filter: brightness(.92); }
+.guest-now { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed rgba(94, 122, 74, .45); }
+.guest-now .kicker { color: var(--green); margin: 0 0 4px; }
+.guest-now p.small { margin: 0; }

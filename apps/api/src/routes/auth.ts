@@ -111,9 +111,9 @@ export async function authRoutes(app: FastifyInstance) {
   app.get('/api/me', async (req): Promise<Me> => {
     const s = await requireUser(req);
     // «Última vez activo» (no cuenta cuando un administrador mira como una familia demo)
-    const [user] = await sql<{ id: string; name: string; phone: string; created_at: Date }[]>`
+    const [user] = await sql<{ id: string; name: string; phone: string; created_at: Date; is_guest: boolean }[]>`
       update users set last_seen_at = case when ${!!s.actAs} then last_seen_at else now() end
-      where id = ${s.sub} returning id, name, phone, created_at`;
+      where id = ${s.sub} returning id, name, phone, created_at, is_guest`;
     if (!user) throw new HttpError(401, 'Inicia sesión');
     const communities = await sql<Me['communities']>`
       select c.id, c.name, c.slug from memberships m join communities c on c.id = m.community_id
@@ -125,7 +125,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
     return {
       id: user.id, name: user.name, phoneHint: user.phone.slice(-3), createdAt: user.created_at.toISOString(), communities: [...communities],
-      isAdmin: !s.actAs && isAdminPhone(user.phone), actingFor,
+      isAdmin: !s.actAs && isAdminPhone(user.phone), isGuest: user.is_guest, actingFor,
     };
   });
 

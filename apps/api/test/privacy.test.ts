@@ -248,6 +248,38 @@ describe('datos listos para el cerebro', () => {
     expect(p!.input.participants).toHaveLength(1);
   });
 
+  it('modo invitado: entra sin datos y genera su plan personal al momento; una cuenta normal no puede', async () => {
+    const g = await app.inject({ method: 'POST', url: '/api/auth/guest', payload: {} });
+    expect(g.statusCode).toBe(200);
+    const guestId = g.json().id as string;
+    const headers = { cookie: `qullqa_session=${g.cookies.find((c) => c.name === 'qullqa_session')!.value}` };
+    const [gu] = await sql<{ phone: string }[]>`select phone from users where id = ${guestId}`;
+    phones.push(gu!.phone);
+    expect((await app.inject({ method: 'GET', url: '/api/me', headers })).json().isGuest).toBe(true);
+
+    const [c3] = await sql<{ id: string }[]>`
+      insert into communities (slug, name, district, province, region, listed, valley_id, center)
+      values (${slug + '-g'}, 'Test Ichupampa', 'Ichupampa', 'Caylloma', 'Arequipa', true, 'colca-chivay-yanque-coporaque', ST_SetSRID(ST_MakePoint(-71.635, -15.64), 4326)::geography)
+      returning id`;
+    extraCommunities.push(c3!.id);
+    await app.inject({ method: 'POST', url: `/api/communities/${c3!.id}/join`, headers });
+    await app.inject({ method: 'POST', url: '/api/parcels', headers, payload: { communityId: c3!.id, captureMethod: 'draw', irrigation, currentRotation: ['papa', 'haba', 'cebada'], name: 'Chacra invitada', ring: ringA } });
+    await app.inject({ method: 'PUT', url: `/api/communities/${c3!.id}/preferences`, headers, payload: { focus: ['money'], constraints, vetoes: [] } });
+    expect((await app.inject({ method: 'POST', url: `/api/communities/${c3!.id}/plan/now`, headers })).statusCode).toBe(409); // sin enviar
+    await app.inject({ method: 'POST', url: `/api/communities/${c3!.id}/submit`, headers });
+    expect((await app.inject({ method: 'GET', url: `/api/communities/${c3!.id}/plan`, headers })).json().waiting).not.toBeNull();
+
+    const now = await app.inject({ method: 'POST', url: `/api/communities/${c3!.id}/plan/now`, headers });
+    expect(now.statusCode).toBe(200);
+    const [run] = await sql<{ kind: string; target_user: string; input: { participants: unknown[] } }[]>`select kind, target_user, input from runs where community_id = ${c3!.id}`;
+    expect(run!.kind).toBe('personal');
+    expect(run!.target_user).toBe(guestId);
+    expect(run!.input.participants).toHaveLength(1);
+    // Pulsar dos veces no encola otra corrida
+    expect((await app.inject({ method: 'POST', url: `/api/communities/${c3!.id}/plan/now`, headers })).json().id).toBe(now.json().id);
+    expect((await app.inject({ method: 'POST', url: `/api/communities/${communityId}/plan/now`, headers: alice.headers })).statusCode).toBe(403);
+  });
+
   it('editar la parcela obliga a reenviar', async () => {
     await app.inject({ method: 'PATCH', url: `/api/parcels/${parcelA}`, headers: alice.headers, payload: { name: 'Chacra de Alice 2' } });
     const r = await app.inject({ method: 'GET', url: `/api/communities/${communityId}/readiness`, headers: alice.headers });

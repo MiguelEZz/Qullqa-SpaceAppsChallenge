@@ -3,7 +3,7 @@ import { privateView, type PlanView, type RunResult } from '@qullqa/engine';
 import type { EngineInput } from '@qullqa/shared';
 import { json, sql } from '../db.ts';
 import { buildEngineInput } from '../engineInput.ts';
-import { requireMember, requireUser, uuidParam } from '../http.ts';
+import { HttpError, requireMember, requireUser, uuidParam } from '../http.ts';
 
 /** Si en este tiempo nadie más de la comunidad envía datos, se calcula un plan personal. */
 export const PERSONAL_PLAN_HOURS = Number(process.env.PERSONAL_PLAN_HOURS ?? 72);
@@ -102,6 +102,30 @@ export async function schedulePersonalPlans(log: (m: string) => void = () => {})
 }
 
 export async function runRoutes(app: FastifyInstance) {
+  /**
+   * Solo invitados (jurado): plan personal al momento, sin esperar a los vecinos ni los 3 días.
+   * Usa solo los datos de esta familia; los planes de los demás no cambian.
+   */
+  app.post<{ Params: { id: string } }>('/api/communities/:id/plan/now', async (req) => {
+    const s = await requireUser(req);
+    const id = uuidParam(req.params.id);
+    await requireMember(s.sub, id);
+    const [u] = await sql<{ is_guest: boolean }[]>`select is_guest from users where id = ${s.sub}`;
+    if (!u?.is_guest) throw new HttpError(403, 'Solo disponible en el modo invitado');
+    const [c] = await sql<{ valley_id: string | null; submitted_at: Date | null }[]>`
+      select c.valley_id, m.submitted_at from communities c join memberships m on m.community_id = c.id and m.user_id = ${s.sub} where c.id = ${id}`;
+    if (!c?.valley_id) throw new HttpError(409, 'Esta comunidad todavía no tiene datos del valle');
+    if (!c.submitted_at) throw new HttpError(409, 'Primero envía tus datos');
+    const busy = json([{ userId: s.sub }]);
+    const [pending] = await sql<{ id: string }[]>`
+      select id from runs where community_id = ${id} and status in ('queued', 'running') and input->'participants' @> ${busy} limit 1`;
+    if (pending) return { id: pending.id };
+    const input = await buildEngineInput(id);
+    const mine = { ...input, participants: input.participants.filter((p) => p.userId === s.sub) };
+    if (!ready(mine).length) throw new HttpError(409, 'Faltan tu chacra o lo que te importa');
+    return insertRun(id, c.valley_id, mine, { kind: 'personal', requestedBy: s.sub, target: s.sub });
+  });
+
   app.get<{ Params: { id: string } }>('/api/communities/:id/plan', async (req): Promise<PlanResponse> => {
     const s = await requireUser(req);
     const id = uuidParam(req.params.id);
